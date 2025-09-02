@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PowerPoint to PDF Converter</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <style>
+        :root {
+            --primary: #4361ee;
+            --secondary: #3a0ca3;
+            --accent: #f72585;
+            --light: #f8f9fa;
+            --dark: #212529;
+            --success: #4cc9f0;
+            --warning: #f9c74f;
+            --danger: #f94144;
+            --gray: #6c757d;
+            --border-radius: 8px;
+            --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            --transition: all 0.3s ease;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #f5f7ff 0%, #e5e9f7 100%);
+            color: var(--dark);
+            line-height: 1.6;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            padding: 30px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            position: relative;
+        }
+        
+        h1 {
+            color: var(--primary);
+            margin-bottom: 10px;
+            font-size: 2.5rem;
+        }
+        
+        .subtitle {
+            color: var(--gray);
+            font-size: 1.1rem;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        .divider {
+            height: 4px;
+            width: 60px;
+            background: var(--accent);
+            margin: 15px auto;
+            border-radius: 2px;
+        }
+        
+        .card {
+            background: var(--light);
+            border-radius: var(--border-radius);
+            padding: 20px;
+            margin-bottom: 25px;
+            box-shadow: var(--shadow);
+        }
+        
+        .card-title {
+            font-size: 1.2rem;
+            color: var(--secondary);
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .card-title i {
+            color: var(--accent);
+        }
+        
+        .upload-area {
+            border: 2px dashed #ccc;
+            border-radius: var(--border-radius);
+            padding: 40px 20px;
+            text-align: center;
+            transition: var(--transition);
+            cursor: pointer;
+            background-color: #fafafa;
+            margin-bottom: 20px;
+        }
+        
+        .upload-area:hover, .upload-area.dragover {
+            border-color: var(--primary);
+            background-color: #f0f4ff;
+        }
+        
+        .upload-icon {
+            font-size: 48px;
+            color: #aaa;
+            margin-bottom: 15px;
+            display: block;
+        }
+        
+        .options-area {
+            margin-bottom: 25px;
+        }
+        
+        .option-group {
+            margin-bottom: 15px;
+        }
+        
+        .option-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: var(--secondary);
+        }
+        
+        .option-select, .option-input {
+            width: 100%;
+            padding: 10px 15px;
+            border: 1px solid #ddd;
+            border-radius: var(--border-radius);
+            font-size: 16px;
+            background-color: white;
+        }
+        
+        .action-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: var(--secondary);
+            transform: translateY(-2px);
+        }
+        
+        .btn-primary:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+        
+        .btn-success:hover {
+            opacity: 0.9;
+            transform: translateY(-2px);
+        }
+        
+        .preview-area {
+            display: none;
+            margin-bottom: 25px;
+        }
+        
+        .preview-title {
+            text-align: center;
+            margin-bottom: 15px;
+            color: var(--secondary);
+            font-size: 1.3rem;
+        }
+        
+        .preview-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: center;
+        }
+        
+        .preview-item {
+            border: 1px solid #eee;
+            border-radius: var(--border-radius);
+            overflow: hidden;
+            box-shadow: var(--shadow);
+            max-width: 200px;
+            background: white;
+            position: relative;
+        }
+        
+        .preview-item img {
+            width: 100%;
+            height: 150px;
+            object-fit: contain;
+            background: #f8f9fa;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .preview-item p {
+            padding: 10px;
+            text-align: center;
+            font-size: 14px;
+            color: var(--gray);
+        }
+        
+        .remove-btn {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: var(--danger);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            font-size: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .progress-area {
+            display: none;
+            margin-bottom: 25px;
+        }
+        
+        .progress-bar {
+            height: 10px;
+            background: #e9ecef;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-bottom: 10px;
+        }
+        
+        .progress {
+            height: 100%;
+            background: var(--primary);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        
+        .status-text {
+            text-align: center;
+            color: var(--gray);
+            font-size: 14px;
+        }
+        
+        .info-area {
+            background: #e9f7ff;
+            border-left: 4px solid var(--success);
+            padding: 15px;
+            border-radius: var(--border-radius);
+            margin-top: 20px;
+        }
+        
+        .info-title {
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: var(--secondary);
+        }
+        
+        .info-text {
+            font-size: 14px;
+            color: var(--gray);
+        }
+        
+        footer {
+            text-align: center;
+            margin-top: 40px;
+            color: var(--gray);
+            font-size: 14px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+            }
+            
+            .action-buttons {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .btn {
+                width: 100%;
+                max-width: 250px;
+                justify-content: center;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+        }
+        
+        .spinner {
+            width: 24px;
+            height: 24px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+            display: inline-block;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        .limitations {
+            background: #fff4e6;
+            border-left: 4px solid var(--warning);
+            padding: 15px;
+            border-radius: var(--border-radius);
+            margin-top: 20px;
+        }
+        
+        .limitations-title {
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: var(--warning);
+        }
+        
+        .limitations-text {
+            font-size: 14px;
+            color: var(--gray);
+        }
+        
+        .slide-counter {
+            text-align: center;
+            margin-top: 10px;
+            font-size: 14px;
+            color: var(--gray);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>PowerPoint to PDF Converter</h1>
+            <div class="divider"></div>
+            <p class="subtitle">Convert your PowerPoint presentations to PDF format using open-source libraries</p>
+        </header>
+        
+        <div class="card">
+            <div class="card-title">
+                <i>📁</i>
+                <span>Upload your PowerPoint file</span>
+            </div>
+            <div class="upload-area" id="uploadArea">
+                <span class="upload-icon">📊</span>
+                <p>Drag & drop your PowerPoint file here or <span style="color: var(--primary); text-decoration: underline;">browse files</span></p>
+                <input type="file" id="fileInput" accept=".pptx,.ppt" style="display: none;">
+            </div>
+            
+            <div class="options-area">
+                <div class="option-group">
+                    <label class="option-label" for="pageSize">Page Size</label>
+                    <select class="option-select" id="pageSize">
+                        <option value="a4">A4</option>
+                        <option value="letter">Letter</option>
+                        <option value="legal">Legal</option>
+                    </select>
+                </div>
+                
+                <div class="option-group">
+                    <label class="option-label" for="orientation">Orientation</label>
+                    <select class="option-select" id="orientation">
+                        <option value="landscape">Landscape</option>
+                        <option value="portrait">Portrait</option>
+                    </select>
+                </div>
+                
+                <div class="option-group">
+                    <label class="option-label" for="margin">Margin (mm)</label>
+                    <input type="number" class="option-input" id="margin" value="20" min="0" max="50">
+                </div>
+            </div>
+            
+            <div class="action-buttons">
+                <button class="btn btn-primary" id="convertBtn" disabled>
+                    <span>Convert to PDF</span>
+                </button>
+                <button class="btn btn-success" id="downloadBtn" disabled>
+                    <span>Download PDF</span>
+                </button>
+            </div>
+        </div>
+        
+        <div class="preview-area" id="previewArea">
+            <h3 class="preview-title">Uploaded Presentation</h3>
+            <div class="preview-container" id="previewContainer">
+                <!-- Preview will be added here -->
+            </div>
+            <div class="slide-counter" id="slideCounter"></div>
+        </div>
+        
+        <div class="progress-area" id="progressArea">
+            <div class="progress-bar">
+                <div class="progress" id="progressBar"></div>
+            </div>
+            <p class="status-text" id="statusText">Processing...</p>
+        </div>
+        
+        <div class="limitations">
+            <p class="limitations-title">Important Limitations</p>
+            <p class="limitations-text">
+                This converter works best with simple PPTX files containing text. Complex formatting, images, animations, 
+                and advanced PowerPoint features will not convert properly. For best results with complex presentations, 
+                consider using Microsoft PowerPoint or online conversion services.
+            </p>
+        </div>
+        
+        <div class="info-area">
+            <p class="info-title">About this converter</p>
+            <p class="info-text">This tool uses open-source libraries (JSZip, pdf-lib) to extract text from PowerPoint files and convert to PDF directly in your browser. Your files are not uploaded to any server - conversion happens locally on your device.</p>
+        </div>
+        
+        <footer>
+            <p>Powered by open-source technology • JSZip, pdf-lib, FileSaver.js</p>
+            <p>© 2023 PowerPoint to PDF Converter. All rights reserved.</p>
+        </footer>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const uploadArea = document.getElementById('uploadArea');
+            const fileInput = document.getElementById('fileInput');
+            const convertBtn = document.getElementById('convertBtn');
+            const downloadBtn = document.getElementById('downloadBtn');
+            const progressArea = document.getElementById('progressArea');
+            const progressBar = document.getElementById('progressBar');
+            const statusText = document.getElementById('statusText');
+            const previewArea = document.getElementById('previewArea');
+            const previewContainer = document.getElementById('previewContainer');
+            const slideCounter = document.getElementById('slideCounter');
+            const pageSizeSelect = document.getElementById('pageSize');
+            const orientationSelect = document.getElementById('orientation');
+            const marginInput = document.getElementById('margin');
+            
+            let uploadedFile = null;
+            let pdfData = null;
+            let slideCount = 0;
+            
+            // File upload handling
+            uploadArea.addEventListener('click', function() {
+                fileInput.click();
+            });
+            
+            fileInput.addEventListener('change', function(e) {
+                if (this.files && this.files.length > 0) {
+                    handleFile(this.files[0]);
+                }
+            });
+            
+            uploadArea.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                uploadArea.classList.add('dragover');
+            });
+            
+            uploadArea.addEventListener('dragleave', function() {
+                uploadArea.classList.remove('dragover');
+            });
+            
+            uploadArea.addEventListener('drop', function(e) {
+                e.preventDefault();
+                uploadArea.classList.remove('dragover');
+                
+                if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                    handleFile(e.dataTransfer.files[0]);
+                }
+            });
+            
+            function handleFile(file) {
+                // Check if file is a PowerPoint document
+                if (!file.name.match(/\.(pptx|ppt)$/i)) {
+                    alert('Please select a PowerPoint file (.pptx or .ppt file).');
+                    return;
+                }
+                
+                uploadedFile = file;
+                
+                // Update UI
+                uploadArea.innerHTML = `<p>Selected file: <strong>${file.name}</strong></p>`;
+                convertBtn.disabled = false;
+                
+                // Try to get slide count for PPTX files
+                if (file.name.toLowerCase().endsWith('.pptx')) {
+                    checkPPTXSlideCount(file);
+                } else {
+                    // For PPT files, we can't easily determine slide count
+                    slideCounter.textContent = "Note: Slide count detection is limited for .ppt files";
+                }
+                
+                // Show file info in preview
+                previewContainer.innerHTML = `
+                    <div class="preview-item">
+                        <div style="height: 150px; display: flex; align-items: center; justify-content: center; background: #f8f9fa;">
+                            <span style="font-size: 48px;">📊</span>
+                        </div>
+                        <p>${file.name}</p>
+                    </div>
+                `;
+                previewArea.style.display = 'block';
+            }
+            
+            function checkPPTXSlideCount(file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const arrayBuffer = e.target.result;
+                    
+                    // PPTX files are ZIP archives containing XML files
+                    try {
+                        const zip = new JSZip();
+                        zip.loadAsync(arrayBuffer)
+                            .then(function(contents) {
+                                // Check for slide files
+                                let slides = 0;
+                                contents.forEach(function(relativePath, zipEntry) {
+                                    if (relativePath.startsWith('ppt/slides/slide') && relativePath.endsWith('.xml')) {
+                                        slides++;
+                                    }
+                                });
+                                
+                                slideCount = slides;
+                                slideCounter.textContent = `Detected ${slides} slides in presentation`;
+                            })
+                            .catch(function() {
+                                slideCounter.textContent = "Could not determine slide count";
+                            });
+                    } catch (error) {
+                        slideCounter.textContent = "Could not determine slide count";
+                    }
+                };
+                reader.readAsArrayBuffer(file);
+            }
+            
+            // Conversion process
+            convertBtn.addEventListener('click', function() {
+                if (!uploadedFile) return;
+                
+                // Show progress
+                progressArea.style.display = 'block';
+                progressBar.style.width = '0%';
+                statusText.textContent = 'Converting...';
+                downloadBtn.disabled = true;
+                
+                // Get options
+                const pageSize = pageSizeSelect.value;
+                const orientation = orientationSelect.value;
+                const margin = parseInt(marginInput.value);
+                
+                // Read the file
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    const arrayBuffer = event.target.result;
+                    
+                    progressBar.style.width = '30%';
+                    statusText.textContent = 'Extracting presentation content...';
+                    
+                    // Process based on file type
+                    if (uploadedFile.name.toLowerCase().endsWith('.pptx')) {
+                        processPPTX(arrayBuffer, pageSize, orientation, margin);
+                    } else {
+                        // For .ppt files, we can only show a message
+                        progressBar.style.width = '100%';
+                        statusText.textContent = 'PPT format not fully supported. Please use PPTX for better results.';
+                        alert('Full conversion of .ppt files is not supported in the browser. Please save your presentation as PPTX format and try again.');
+                    }
+                };
+                
+                reader.readAsArrayBuffer(uploadedFile);
+            });
+            
+            async function processPPTX(arrayBuffer, pageSize, orientation, margin) {
+                try {
+                    const zip = await JSZip.loadAsync(arrayBuffer);
+                    
+                    // Get slide count
+                    let slideFiles = [];
+                    zip.forEach(function(relativePath, zipEntry) {
+                        if (relativePath.startsWith('ppt/slides/slide') && relativePath.endsWith('.xml')) {
+                            slideFiles.push(relativePath);
+                        }
+                    });
+                    
+                    progressBar.style.width = '50%';
+                    statusText.textContent = `Processing ${slideFiles.length} slides...`;
+                    
+                    // Create PDF
+                    const { PDFDocument, rgb } = PDFLib;
+                    const pdfDoc = await PDFDocument.create();
+                    
+                    // Process each slide
+                    for (let i = 0; i < slideFiles.length; i++) {
+                        const slidePath = slideFiles[i];
+                        const slideContent = await zip.file(slidePath).async('text');
+                        
+                        // Extract text from slide XML (simplified)
+                        const textContent = extractTextFromSlideXML(slideContent);
+                        
+                        // Add a page for this slide
+                        addSlideToPDF(pdfDoc, textContent, i+1, pageSize, orientation, margin);
+                        
+                        // Update progress
+                        progressBar.style.width = `${50 + ((i + 1) / slideFiles.length) * 40}%`;
+                        statusText.textContent = `Processing slide ${i + 1} of ${slideFiles.length}...`;
+                    }
+                    
+                    // Serialize the PDFDocument to bytes
+                    pdfData = await pdfDoc.save();
+                    
+                    // Complete progress
+                    progressBar.style.width = '100%';
+                    statusText.textContent = 'Conversion complete!';
+                    
+                    // Enable download button
+                    downloadBtn.disabled = false;
+                    
+                } catch (error) {
+                    console.error('Error processing PPTX:', error);
+                    statusText.textContent = 'Error processing presentation. Please try another file.';
+                }
+            }
+            
+            function extractTextFromSlideXML(xmlContent) {
+                // Simplified text extraction from slide XML
+                // This is a very basic implementation
+                let text = '';
+                
+                // Extract text between <a:t> tags (text content in PPTX)
+                const textMatch = xmlContent.match(/<a:t[^>]*>([^<]*)<\/a:t>/g);
+                if (textMatch) {
+                    textMatch.forEach(match => {
+                        const content = match.replace(/<a:t[^>]*>/, '').replace(/<\/a:t>/, '');
+                        text += content + ' ';
+                    });
+                }
+                
+                return text || 'Slide content (text extraction limited)';
+            }
+            
+            async function addSlideToPDF(pdfDoc, content, slideNumber, pageSize, orientation, margin) {
+                const { rgb } = PDFLib;
+                
+                // Set page size
+                let width, height;
+                switch(pageSize) {
+                    case 'letter':
+                        width = 612;
+                        height = 792;
+                        break;
+                    case 'legal':
+                        width = 612;
+                        height = 1008;
+                        break;
+                    case 'a4':
+                    default:
+                        width = 595;
+                        height = 842;
+                        break;
+                }
+                
+                if (orientation === 'landscape') {
+                    [width, height] = [height, width];
+                }
+                
+                // Add a page
+                const page = pdfDoc.addPage([width, height]);
+                
+                // Draw slide number
+                const fontSize = 12;
+                page.drawText(`Slide ${slideNumber}`, {
+                    x: margin,
+                    y: height - margin,
+                    size: fontSize,
+                    color: rgb(0.5, 0.5, 0.5),
+                });
+                
+                // Draw content
+                const contentTop = height - margin - 30;
+                const maxWidth = width - (margin * 2);
+                
+                // Simple text wrapping
+                const words = content.split(' ');
+                let line = '';
+                let y = contentTop;
+                
+                for (let i = 0; i < words.length; i++) {
+                    const testLine = line + words[i] + ' ';
+                    const testWidth = 8 * testLine.length; // Approximate width
+                    
+                    if (testWidth > maxWidth && i > 0) {
+                        page.drawText(line, {
+                            x: margin,
+                            y: y,
+                            size: 14,
+                            color: rgb(0, 0, 0),
+                        });
+                        line = words[i] + ' ';
+                        y -= 20;
+                    } else {
+                        line = testLine;
+                    }
+                }
+                
+                // Draw the last line
+                page.drawText(line, {
+                    x: margin,
+                    y: y,
+                    size: 14,
+                    color: rgb(0, 0, 0),
+                });
+                
+                // Draw a simple slide border
+                page.drawRectangle({
+                    x: margin - 5,
+                    y: margin - 5,
+                    width: width - (margin * 2) + 10,
+                    height: height - (margin * 2) + 10,
+                    borderColor: rgb(0.8, 0.8, 0.8),
+                    borderWidth: 1,
+                });
+            }
+            
+            // Download functionality
+            downloadBtn.addEventListener('click', function() {
+                if (!pdfData) return;
+                
+                // Create file name
+                const fileName = uploadedFile.name.replace(/\.(pptx|ppt)$/i, '.pdf');
+                
+                // Create blob and download
+                const blob = new Blob([pdfData], { type: 'application/pdf' });
+                saveAs(blob, fileName);
+            });
+        });
+    </script>
+</body>
+</html>
